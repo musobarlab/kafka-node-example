@@ -3,45 +3,40 @@
 const kafka = require('kafka-node');
 const ctx = 'kafka-producer';
 
-const client = new kafka.KafkaClient({
-  kafkaHost: '127.0.0.1:9092',
-  autoConnect: true,
-  connectRetryOptions: {
-    retries: 4,
-    minTimeout: 1000,
-    maxTimeout: 3000,
-    randomize: true
-  }
-});
+function KafkaProducer() {
+    const client = new kafka.KafkaClient({
+        kafkaHost: '127.0.0.1:9092',
+        autoConnect: true,
+        connectRetryOptions: {
+            retries: 4,
+            minTimeout: 1000,
+            maxTimeout: 3000,
+            randomize: true
+        }
+    });
+      
+    return new kafka.HighLevelProducer(client);
+}
 
-const producer = new kafka.HighLevelProducer(client);
-producer.on('ready', () => {
-    console.log(ctx, 'ready', 'kafka producer is connected');
-});
-
-const produce = (data) => {
-  const buffer = new Buffer.from(JSON.stringify(data.body));
-  const record = [
-    {
-      topic: data.topic,
-      messages: buffer,
-      attributes: 1
-    }
-  ];
-  producer.send(record, (err, data) => {
-    if(err) {
-      console.log(ctx, 'producer send error', 'kafka-producer');
-    } else {
-        console.log(ctx,`producer send success ${data}`,'kafka-producer');
-    }
-  });
+const produce = (producer, data, cb) => {
+    const buffer = new Buffer.from(JSON.stringify(data.body));
+    const record = [
+        {
+            topic: data.topic,
+            messages: buffer,
+            attributes: 1
+        }
+    ];
+    producer.send(record, (err, data) => {
+        if(err) {
+            cb(err);
+        } else {
+            cb(null, data);
+        }
+    });
 };
 
-producer.on('error', (error) => {
-    console.log(ctx, error, 'Kafka Producer Error');
-});
-
-
 module.exports = {
-    produce
+    produce,
+    KafkaProducer
 };

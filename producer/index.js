@@ -1,24 +1,26 @@
 'use strict';
 
 const express = require('express');
-const kafkaProducer = require('./producer');
+const {produce, KafkaProducer} = require('./producer');
 const bodyParser = require('body-parser');
 
 const app = express();
+
+//setup kafka producer
+
+const producer = new KafkaProducer();
+producer.on('ready', () => {
+    console.log('kafka producer is connected');
+});
+
+producer.on('error', (error) => {
+    console.log('Kafka Producer Error', error);
+});
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({     // to support URL-encoded bodies
     extended: true
 }));
-
-const kafkaSendMessage = async (data) => {
-    const message = {
-      topic : 'test1',
-      ...data
-    };
-    kafkaProducer.produce(message);
-  };
-  
 
 app.get('/', (req,res) => {
     res.json({greeting:'kafka producer'})
@@ -27,11 +29,19 @@ app.get('/', (req,res) => {
 app.post('/send', (req, res) => {
 
     const body = req.body;
+
     const message = {
+        topic : 'test1',
         body: body
     };
 
-    kafkaSendMessage(message);
+    produce(producer, message, (err, data) => {
+        if (err) {
+            console.log('producer send error');
+        } else {
+            console.log(`producer send success ${data}`);
+        }
+    });
     
     res.json(req.body);
 });
